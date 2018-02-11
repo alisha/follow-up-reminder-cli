@@ -56,7 +56,6 @@ def message_last_in_thread(service, message):
     try:
         thread = service.users().threads().get(userId='me', id=thread_id).execute()
         all_messages = thread['messages']
-        print("Current message ID is " + message["id"] + " and last message in thread ID is " + all_messages[-1]["id"])
         return message["id"] == all_messages[-1]["id"]
     except errors.HttpError, error:
         print('An error occurred: %s' % error)
@@ -76,18 +75,40 @@ def get_old_messages(service):
             # make sure current message is last message in thread
             for message in response['messages']:
                 thread_id = message["threadId"]
-                print("Message id is " + message["id"] + ", thread id " + thread_id + ", last in thread is %r" % message_last_in_thread(service, message))
+                if message_last_in_thread(service, message):
+                    messages.append(message["id"])
 
         while 'nextPageToken' in response:
             page_token = response['nextPageToken']
             response = service.users().messages().list(userId='me', q=query,
                                              pageToken=page_token).execute()
             for message in response['messages']:
-                print(message)
+                thread_id = message["threadId"]
+                if message_last_in_thread(service, message):
+                    messages.append(message["id"])
 
         return messages
     except errors.HttpError, error:
         print('An error occurred: %s' % error)
+
+
+# Given messages, an array of message IDs, print info to get user to follow up
+def print_followup_info(service, messages):
+    for message_id in messages:
+        try:
+            message_info = service.users().messages().get(userId='me', id=message_id, format="metadata").execute()
+
+            # Find message subject, sent date, and URL
+            desired_info = ["Subject", "To", "Date"]
+            message_headers = message_info["payload"]["headers"]
+            for info in desired_info:
+                for header in message_headers:
+                    if header["name"] == info:
+                        print("%s: %s" % (info, header["value"]))
+            print("Message ID: %s\n" % message_id)
+
+        except errors.HttpError, error:
+            print('An error occurred: %s' % error)
 
 
 def main():
@@ -95,7 +116,9 @@ def main():
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
     service = discovery.build('gmail', 'v1', http=http)
-    get_old_messages(service)
+    
+    messages = get_old_messages(service)
+    print_followup_info(service, messages)
 
 if __name__ == '__main__':
     main()
