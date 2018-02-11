@@ -47,6 +47,22 @@ def get_credentials():
         print('Storing credentials to ' + credential_path)
     return credentials
 
+
+# Returns true if message is the last message in its thread
+# False otherwise
+def message_last_in_thread(service, message):
+    thread_id = message["threadId"]
+    # https://developers.google.com/gmail/api/v1/reference/users/threads/get
+    try:
+        thread = service.users().threads().get(userId='me', id=thread_id).execute()
+        all_messages = thread['messages']
+        print("Current message ID is " + message["id"] + " and last message in thread ID is " + all_messages[-1]["id"])
+        return message["id"] == all_messages[-1]["id"]
+    except errors.HttpError, error:
+        print('An error occurred: %s' % error)
+
+
+# from https://developers.google.com/gmail/api/v1/reference/users/messages/list
 def get_old_messages(service):
     try:
         one_week = (datetime.today() - timedelta(days=7)).strftime("%Y/%m/%d")
@@ -59,7 +75,8 @@ def get_old_messages(service):
         if 'messages' in response:
             # make sure current message is last message in thread
             for message in response['messages']:
-                print(message)
+                thread_id = message["threadId"]
+                print("Message id is " + message["id"] + ", thread id " + thread_id + ", last in thread is %r" % message_last_in_thread(service, message))
 
         while 'nextPageToken' in response:
             page_token = response['nextPageToken']
