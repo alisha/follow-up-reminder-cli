@@ -14,7 +14,7 @@ try:
 except ImportError:
     flags = None
 
-SCOPES = 'https://www.googleapis.com/auth/gmail.readonly'
+SCOPES = 'https://www.googleapis.com/auth/gmail.modify'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Gmail API Python Quickstart'
 
@@ -33,7 +33,7 @@ def get_credentials():
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
     credential_path = os.path.join(credential_dir,
-                                   'gmail-python-quickstart.json')
+                                   'follow-up-reminder.json')
 
     store = Storage(credential_path)
     credentials = store.get()
@@ -111,6 +111,27 @@ def print_followup_info(service, messages):
             print('An error occurred: %s' % error)
 
 
+# Given messages (array of message IDs) and a label, add label to each message
+def add_label(service, label, messages):
+    # Check if label already exists, if not then create it
+    user_labels = service.users().labels().list(userId='me').execute()
+    label_id = 0
+    for user_label in user_labels['labels']:
+        if user_label["name"] == label:
+            label_id = user_label["id"]
+
+    if label_id == 0:
+        label_obj = {   'name': label,
+                        'labelListVisibility': 'labelShow'
+                    }
+        new_label = service.users().labels().create(userId='me', body=label_obj).execute()
+        label_id = new_label["id"]
+
+    # Add label to messages
+    for message_id in messages:
+        service.users().messages().modify(userId='me', id=message_id, body={"addLabelIds": [label_id]}).execute()
+
+
 def main():
     # Get credentials
     credentials = get_credentials()
@@ -119,6 +140,7 @@ def main():
     
     messages = get_old_messages(service)
     print_followup_info(service, messages)
+    add_label(service, "Follow Up", messages)
 
 if __name__ == '__main__':
     main()
