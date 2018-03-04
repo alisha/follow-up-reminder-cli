@@ -16,7 +16,7 @@ except ImportError:
 
 SCOPES = 'https://www.googleapis.com/auth/gmail.modify'
 CLIENT_SECRET_FILE = 'client_secret.json'
-APPLICATION_NAME = 'Gmail API Python Quickstart'
+APPLICATION_NAME = 'Follow Up Reminder'
 
 
 def get_credentials():
